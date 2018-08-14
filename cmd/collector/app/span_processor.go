@@ -19,11 +19,13 @@ import (
 
 	"github.com/uber/tchannel-go"
 	"go.uber.org/zap"
+	"context"
 
 	"github.com/jaegertracing/jaeger/cmd/collector/app/sanitizer"
 	"github.com/jaegertracing/jaeger/model"
 	"github.com/jaegertracing/jaeger/pkg/queue"
 	"github.com/jaegertracing/jaeger/storage/spanstore"
+	//"github.com/uber/tchannel-go/thrift"
 )
 
 type spanProcessor struct {
@@ -41,9 +43,10 @@ type spanProcessor struct {
 
 type queueItem struct {
 	queuedTime time.Time
+	ctx  context.Context
 	span       *model.Span
 }
-
+var _ SpanProcessor = &spanProcessor{}
 // NewSpanProcessor returns a SpanProcessor that preProcesses, filters, queues, sanitizes, and processes spans
 func NewSpanProcessor(
 	spanWriter spanstore.Writer,
@@ -96,9 +99,9 @@ func (sp *spanProcessor) Stop() {
 	sp.queue.Stop()
 }
 
-func (sp *spanProcessor) saveSpan(span *model.Span) {
+func (sp *spanProcessor) saveSpan(ctx context.Context,span *model.Span) {
 	startTime := time.Now()
-	if err := sp.spanWriter.WriteSpan(span); err != nil {
+	if err := sp.spanWriter.WriteSpan(ctx ,span); err != nil {
 		sp.logger.Error("Failed to save span", zap.Error(err))
 	} else {
 		sp.logger.Debug("Span written to the storage by the collector",
@@ -108,12 +111,12 @@ func (sp *spanProcessor) saveSpan(span *model.Span) {
 	sp.metrics.SaveLatency.Record(time.Now().Sub(startTime))
 }
 
-func (sp *spanProcessor) ProcessSpans(mSpans []*model.Span, spanFormat string) ([]bool, error) {
+func (sp *spanProcessor) ProcessSpans(ctx context.Context,mSpans []*model.Span, spanFormat string) ([]bool, error) {
 	sp.preProcessSpans(mSpans)
 	sp.metrics.BatchSize.Update(int64(len(mSpans)))
 	retMe := make([]bool, len(mSpans))
 	for i, mSpan := range mSpans {
-		ok := sp.enqueueSpan(mSpan, spanFormat)
+		ok := sp.enqueueSpan(ctx, mSpan, spanFormat)
 		if !ok && sp.reportBusy {
 			return nil, tchannel.ErrServerBusy
 		}
@@ -123,11 +126,11 @@ func (sp *spanProcessor) ProcessSpans(mSpans []*model.Span, spanFormat string) (
 }
 
 func (sp *spanProcessor) processItemFromQueue(item *queueItem) {
-	sp.processSpan(sp.sanitizer(item.span))
+	sp.processSpan(item.ctx,sp.sanitizer(item.span))
 	sp.metrics.InQueueLatency.Record(time.Now().Sub(item.queuedTime))
 }
 
-func (sp *spanProcessor) enqueueSpan(span *model.Span, originalFormat string) bool {
+func (sp *spanProcessor) enqueueSpan(ctx context.Context,span *model.Span, originalFormat string) bool {
 	spanCounts := sp.metrics.GetCountsForFormat(originalFormat)
 	spanCounts.ReceivedBySvc.ReportServiceNameForSpan(span)
 
@@ -138,6 +141,7 @@ func (sp *spanProcessor) enqueueSpan(span *model.Span, originalFormat string) bo
 	item := &queueItem{
 		queuedTime: time.Now(),
 		span:       span,
+		ctx: ctx,
 	}
 	addedToQueue := sp.queue.Produce(item)
 	if !addedToQueue {

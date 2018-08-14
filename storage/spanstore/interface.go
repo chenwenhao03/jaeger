@@ -17,13 +17,14 @@ package spanstore
 import (
 	"errors"
 	"time"
+	"context"
 
 	"github.com/jaegertracing/jaeger/model"
 )
 
 // Writer writes spans to storage.
 type Writer interface {
-	WriteSpan(span *model.Span) error
+	WriteSpan(ctx context.Context,span *model.Span) error
 }
 
 var (

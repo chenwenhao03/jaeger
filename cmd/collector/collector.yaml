@@ -1,0 +1,12 @@
+es:
+  server-urls: http://127.0.0.1:9200
+  username: elastic
+  password: changeme
+pandora:
+  server-urls: http://127.0.0.1:9200
+  ak: elastic
+  sk: changeme
+collector:
+  zipkin:
+    http-port: 9411
+  http-port: 9410

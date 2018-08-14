@@ -237,7 +237,10 @@ func (m *Process) GetTags() []KeyValue {
 	}
 	return nil
 }
-
+type SpanWrapper struct {
+	UID string
+	Span
+}
 type Span struct {
 	TraceID       TraceID       `protobuf:"bytes,1,opt,name=trace_id,json=traceId,proto3,customtype=TraceID" json:"trace_id"`
 	SpanID        SpanID        `protobuf:"bytes,2,opt,name=span_id,json=spanId,proto3,customtype=SpanID" json:"span_id"`

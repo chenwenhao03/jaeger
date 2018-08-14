@@ -95,7 +95,9 @@ func main() {
 				logger.Fatal("Cannot create metrics factory.", zap.Error(err))
 			}
 
+			// 初始化后端存储 --start wenhao
 			storageFactory.InitFromViper(v)
+			// Initialize 初始化了个es的client = primaryClient
 			if err := storageFactory.Initialize(baseFactory, logger); err != nil {
 				logger.Fatal("Failed to init storage factory", zap.Error(err))
 			}
@@ -134,6 +136,7 @@ func main() {
 			}
 			ch.Serve(listener)
 
+			// http server start by wenhao
 			r := mux.NewRouter()
 			apiHandler := app.NewAPIHandler(jaegerBatchesHandler)
 			apiHandler.RegisterRoutes(r)

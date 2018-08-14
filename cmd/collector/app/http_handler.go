@@ -59,6 +59,7 @@ func (aH *APIHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/traces", aH.saveSpan).Methods(http.MethodPost)
 }
 
+// TODO 加入ak sk处理逻辑
 func (aH *APIHandler) saveSpan(w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()

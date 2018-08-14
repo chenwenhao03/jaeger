@@ -27,6 +27,7 @@ import (
 	"github.com/jaegertracing/jaeger/plugin/storage/es"
 	"github.com/jaegertracing/jaeger/plugin/storage/kafka"
 	"github.com/jaegertracing/jaeger/plugin/storage/memory"
+//	"github.com/jaegertracing/jaeger/plugin/storage/pandora"
 	"github.com/jaegertracing/jaeger/storage"
 	"github.com/jaegertracing/jaeger/storage/dependencystore"
 	"github.com/jaegertracing/jaeger/storage/spanstore"
@@ -37,6 +38,7 @@ const (
 	elasticsearchStorageType = "elasticsearch"
 	memoryStorageType        = "memory"
 	kafkaStorageType         = "kafka"
+	pandoraStorageType         = "pandora"
 )
 
 var allStorageTypes = []string{cassandraStorageType, elasticsearchStorageType, memoryStorageType, kafkaStorageType}
@@ -79,6 +81,8 @@ func (f *Factory) getFactoryOfType(factoryType string) (storage.Factory, error) 
 		return memory.NewFactory(), nil
 	case kafkaStorageType:
 		return kafka.NewFactory(), nil
+//	case pandoraStorageType:
+//		return pandora.NewFactory(), nil
 	default:
 		return nil, fmt.Errorf("Unknown storage type %s. Valid types are %v", factoryType, allStorageTypes)
 	}

@@ -50,14 +50,14 @@ type JaegerBatchesHandler interface {
 // SpanProcessor handles model spans
 type SpanProcessor interface {
 	// ProcessSpans processes model spans and return with either a list of true/false success or an error
-	ProcessSpans(mSpans []*model.Span, spanFormat string) ([]bool, error)
+	ProcessSpans(ctx thrift.Context,mSpans []*model.Span, spanFormat string) ([]bool, error)
 }
 
 type jaegerBatchesHandler struct {
 	logger         *zap.Logger
 	modelProcessor SpanProcessor
 }
-
+var _ JaegerBatchesHandler = &jaegerBatchesHandler{}
 // NewJaegerSpanHandler returns a JaegerBatchesHandler
 func NewJaegerSpanHandler(logger *zap.Logger, modelProcessor SpanProcessor) JaegerBatchesHandler {
 	return &jaegerBatchesHandler{
@@ -68,13 +68,14 @@ func NewJaegerSpanHandler(logger *zap.Logger, modelProcessor SpanProcessor) Jaeg
 
 func (jbh *jaegerBatchesHandler) SubmitBatches(ctx thrift.Context, batches []*jaeger.Batch) ([]*jaeger.BatchSubmitResponse, error) {
 	responses := make([]*jaeger.BatchSubmitResponse, 0, len(batches))
+
 	for _, batch := range batches {
 		mSpans := make([]*model.Span, 0, len(batch.Spans))
 		for _, span := range batch.Spans {
 			mSpan := jConv.ToDomainSpan(span, batch.Process)
 			mSpans = append(mSpans, mSpan)
 		}
-		oks, err := jbh.modelProcessor.ProcessSpans(mSpans, JaegerFormatType)
+		oks, err := jbh.modelProcessor.ProcessSpans(ctx ,mSpans, JaegerFormatType)
 		if err != nil {
 			jbh.logger.Error("Collector failed to process span batch", zap.Error(err))
 			return nil, err
@@ -118,7 +119,7 @@ func (h *zipkinSpanHandler) SubmitZipkinBatch(ctx thrift.Context, spans []*zipki
 		sanitized := h.sanitizer.Sanitize(span)
 		mSpans = append(mSpans, convertZipkinToModel(sanitized, h.logger)...)
 	}
-	bools, err := h.modelProcessor.ProcessSpans(mSpans, ZipkinFormatType)
+	bools, err := h.modelProcessor.ProcessSpans(ctx,mSpans, ZipkinFormatType)
 	if err != nil {
 		h.logger.Error("Collector failed to process Zipkin span batch", zap.Error(err))
 		return nil, err
